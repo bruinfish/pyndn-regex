@@ -11,6 +11,7 @@ class RegexError(Exception):
 
 class BaseMatcher(object):
     def __init__(self, expr, backRef, exact=True):
+        logging.debug("BaseMatcher Constructor")
         self.expr    = expr
         self.backRef = backRef
         self.exact   = exact
@@ -29,7 +30,7 @@ class BaseMatcher(object):
             return False
 
     def _recursiveMatch(mId, name, offset, len):
-        logging.debug("BaseMatcher _recursiveMatch")
+        logging.debug("BaseMatcher._recursiveMatch()")
 
         tried = 0
 
@@ -86,7 +87,7 @@ class ComponentSetMatcher(BaseMatcher):
         super(ComponentSetMatcher, self).__init__(expr, backRef, exact)
 
         if '<' == self.expr[0]:
-            self._CompileSingleComponent()
+            self._compileSingleComponent()
         elif '[' == self.expr[0]:
             lastIndex = len(self.expr) - 1
             if ']' != self.expr[lastIndex]:
@@ -408,6 +409,10 @@ class RegexMatcher(BaseMatcher):
         logging.debug ("reconstructed expr " + tmp_expr);
 
         self.matcherList.append(PatternListMatcher(tmp_expr, self.backRef, self.exact))
+
+    def matchName(name):
+        return self.match(name, 0, len(name))
+        
 
 
 
