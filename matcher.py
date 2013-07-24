@@ -22,30 +22,31 @@ class BaseMatcher(object):
         logging.debug("BaseMatcher.match()")
         self.matchResult = []
 
-        if _recursiveMatch(0, name, offset, len):
+        if self._recursiveMatch(0, name, offset, len):
             for i in range(offset,  offset + len):
-                m_matchResult.append(name[i])
+                self.matchResult.append(name[i])
             return True
         else:
             return False
 
-    def _recursiveMatch(mId, name, offset, len):
+    def _recursiveMatch(self, mId, name, offset, length):
         logging.debug("BaseMatcher._recursiveMatch()")
-
+        logging.debug("mId: " + str(mId) + " name: " +  str(name) + " offset: " + str(offset) + " length: " + str(length))
         tried = 0
 
         if mId >= len(self.matcherList) :
-            if len != 0 :
+            if length != 0 :
                 return False
             else:
-                return False
+                return True
     
         matcher = self.matcherList[mId]
 
-        while tried <= len:
-            if matcher.match(name, offset, tried) and _recursiveMatch(mId + 1, name, offset + tried, len - tried) :
+        while tried <= length:
+            if matcher.match(name, offset, tried) and self._recursiveMatch(mId + 1, name, offset + tried, length - tried) :
                 return True     
             tried += 1
+            logging.debug("tried: " + str(tried) + " length: " + str(length))
 
         return False
 
@@ -189,21 +190,20 @@ class BackRefMatcher(BaseMatcher):
 
 class PatternListMatcher(BaseMatcher):
     def __init__(self, expr, backRef, exact=True):
-        super(PatternListMatcher, self).__init(expr, backRef, exact)
+        super(PatternListMatcher, self).__init__(expr, backRef, exact)
         logging.debug("PatternListMatcher Constructor")
 
-        len = len(self.expr)
+        exprSize = len(self.expr)
         index = 0
         subHead = index
     
-        while index < len:
+        while index < exprSize:
             subHead = index
-            (r_res, r_index) = _extractPattern(subHead, index)
+            (r_res, r_index) = self._extractPattern(subHead, index)
             index = r_index
             if not r_res:
                 raise RegexError("Fail to create PatternListMatcher")
-            
-        return True
+
 
     def _extractPattern(self, index, next):
         logging.debug("PatternListMatcher _extractPattern")
@@ -223,9 +223,9 @@ class PatternListMatcher(BaseMatcher):
             end = _extractRepetition(index)
         elif '<' == self.expr[index]:
             index += 1
-            index = _extractSubPattern('<', '>', index)
+            index = self._extractSubPattern('<', '>', index)
             indicator = index
-            end = _extractRepetition(index)
+            end = self._extractRepetition(index)
             logging.debug("start: " + str(start) + " end: " + str(end) + " indicator: " + str(indicator))
         else:
             raise RegexError(errMsg +"unexpected syntax")
@@ -284,6 +284,7 @@ class PatternListMatcher(BaseMatcher):
 class RepeatMatcher(BaseMatcher):
     def __init__(self, expr, backRef, indicator, exact=True):
         logging.debug("RepeatMatcher Constructor")
+        logging.debug("expr: " + expr);
         super(RepeatMatcher, self).__init__(expr, backRef, exact)
         self.indicator = indicator
         if '(' == self.expr[0]:
@@ -305,6 +306,7 @@ class RepeatMatcher(BaseMatcher):
         if exprSize == self.indicator:
             self.repeatMin = 1
             self.repeatMax = 1
+            return
         else:
             if exprSize == (self.indicator + 1):
                 if '?' == self.expr[self.indicator]:
