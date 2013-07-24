@@ -11,7 +11,7 @@ class RegexError(Exception):
 
 class BaseMatcher(object):
     def __init__(self, expr, backRef, exact=True):
-        logging.debug("BaseMatcher Constructor")
+        logging.debug(self.__class__.__name__ + ".Constructor")
         self.expr    = expr
         self.backRef = backRef
         self.exact   = exact
@@ -19,7 +19,7 @@ class BaseMatcher(object):
         self.matcherList = []
 
     def match(self, name, offset, len):
-        logging.debug("BaseMatcher.match()")
+        logging.debug(self.__class__.__name__ + ".match(): " + "expr: " + self.expr + " offset: " + str(offset) + " length: " + str(len))
         self.matchResult = []
 
         if self._recursiveMatch(0, name, offset, len):
@@ -30,23 +30,26 @@ class BaseMatcher(object):
             return False
 
     def _recursiveMatch(self, mId, name, offset, length):
-        logging.debug("BaseMatcher._recursiveMatch()")
-        logging.debug("mId: " + str(mId) + " name: " +  str(name) + " offset: " + str(offset) + " length: " + str(length))
+        logging.debug(self.__class__.__name__ + "._recursiveMatch(): " + self.expr)
+        logging.debug("mId: " + str(mId) + " name: " +  str(name) + " offset: " + str(offset) + " length: " + str(length) + " matcherListSize: " + str(len(self.matcherList)))
         tried = 0
 
         if mId >= len(self.matcherList) :
             if length != 0 :
+                logging.debug("Fail " + self.__class__.__name__ + "._recursiveMatch(): no more matcher, but more components")
                 return False
             else:
+                logging.debug("Succeed " + self.__class__.__name__ + "._recursiveMatch(): no more matcher, no more components")
                 return True
     
         matcher = self.matcherList[mId]
 
         while tried <= length:
             if matcher.match(name, offset, tried) and self._recursiveMatch(mId + 1, name, offset + tried, length - tried) :
-                return True     
+                return True
+            logging.debug(self.__class__.__name__ + " expr: " + self.expr + " mId: " + str(mId) + " tried: " + str(tried) + " length: " + str(length))
             tried += 1
-            logging.debug("tried: " + str(tried) + " length: " + str(length))
+            
 
         return False
 
@@ -54,13 +57,13 @@ class BaseMatcher(object):
 
 class ComponentMatcher(BaseMatcher):
     def __init__(self, expr, backRef, exact=True):
-        logging.debug("ComponentMatcher Constructor")
+        logging.debug(self.__class__.__name__ + ".Constructor")
         logging.debug("expr " + expr)
         
         super(ComponentMatcher, self).__init__(expr, backRef, exact)
 
     def match(self, name, offset, len):
-        logging.debug("ComponentMatcher match")
+        logging.debug(self.__class__.__name__ + ".match()")
         logging.debug("Name " + str(name) + " offset " +  str(offset) + " len " +str(len))
 
         self.matchResult = []
@@ -69,6 +72,7 @@ class ComponentMatcher(BaseMatcher):
         if self.exact:
             if matcher.match(name[offset]):
                 self.matchResult.append(name[offset])
+                logging.debug("Succeed " + self.__class__.__name__ + ".match() ")
                 return True
         else:
             if matcher.search(name[offset]):
@@ -80,7 +84,7 @@ class ComponentMatcher(BaseMatcher):
 
 class ComponentSetMatcher(BaseMatcher):
     def __init__(self, expr, backRef, exact=True):
-        logging.debug("ComponentSetMatcher Constructor")
+        logging.debug(self.__class__.__name__ + ".Constructor")
         
         errMsg = "Error: ComponentSetMatcher.Constructor: "
         self.include = True
@@ -102,7 +106,7 @@ class ComponentSetMatcher(BaseMatcher):
 
 
     def _compileSingleComponent(self):
-        logging.debug("ComponentSetMatcher _compileSingleComponent")
+        logging.debug(self.__class__.__name__ + "._compileSingleComponent")
         
         errMsg = "Error: ComponentSetMatcher.CompileSingleComponent(): "
 
@@ -114,7 +118,7 @@ class ComponentSetMatcher(BaseMatcher):
             self.matcherList.append(ComponentMatcher(self.expr[1:end-1], self.backRef))
 
     def _compileMultipleComponents(self, start, lastIndex):
-        logging.debug("ComponentSetMatcher _compileMultipleComponents")
+        logging.debug(self.__class__.__name__ + "._compileMultipleComponents")
         
         errMsg = "Error: ComponentSetMatcher.CompileMultipleComponents(): "
         
@@ -132,7 +136,7 @@ class ComponentSetMatcher(BaseMatcher):
            raise RegexError(errMsg + "Not sufficient expr to parse " + self.expr)
 
     def _extractComponent(self, index):
-        logging.debug("ComponentSetMatcher _extractComponent")
+        logging.debug(self.__class__.__name__ + "._extractComponent")
         lcount = 1
         rcount = 0
 
@@ -149,7 +153,7 @@ class ComponentSetMatcher(BaseMatcher):
         return index
 
     def match(self, name, offset, len):
-        logging.debug("ComponentSetMatcher match")
+        logging.debug(self.__class__.__name__ + ".match")
 
         self.matchResult = []
         
@@ -172,26 +176,28 @@ class ComponentSetMatcher(BaseMatcher):
 
 class BackRefMatcher(BaseMatcher):
     def __init__(self, expr, backRef, exact=True):
+        logging.debug (self.__class__.__name__ + ".Constructor")
         super(BackRefMatcher, self).__init__(expr, backRef, exact)
-        logging.debug ("BackRefMatcher Constructor")
-
+        
         errMsg = "Error: BackRefMatcher Constructor: "
-    
+
+        logging.debug ("expr: " +  self.expr);
         logging.debug ("backRefManager " + str(self.backRef) + " size: " + str(len(self.backRef)))
 
         lastIndex = len(self.expr) - 1
         
         if '(' == self.expr[0] and ')' == self.expr[lastIndex]:
             self.backRef.append(self)
-            self.matcherList.append(PatternListMatcher(self.expr[1:lastIndex-1], self.backRef, self.exact))
+            self.matcherList.append(PatternListMatcher(self.expr[1:lastIndex], self.backRef, self.exact))
         else:
             raise RegexError(errMsg + " Unrecognoized format " + self.expr)
 
 
 class PatternListMatcher(BaseMatcher):
     def __init__(self, expr, backRef, exact=True):
+        logging.debug(self.__class__.__name__ + ".Constructor")
         super(PatternListMatcher, self).__init__(expr, backRef, exact)
-        logging.debug("PatternListMatcher Constructor")
+        logging.debug("expr: " + self.expr)
 
         exprSize = len(self.expr)
         index = 0
@@ -206,7 +212,7 @@ class PatternListMatcher(BaseMatcher):
 
 
     def _extractPattern(self, index, next):
-        logging.debug("PatternListMatcher _extractPattern")
+        logging.debug(self.__class__.__name__ + "._extractPattern")
 
         errMsg = "Error: PatternListMatcher._extractPattern: "
     
@@ -218,30 +224,36 @@ class PatternListMatcher(BaseMatcher):
 
         if '(' == self.expr[index]:
             index += 1
-            index = _extractSubPattern('(', ')', index)
+            index = self._extractSubPattern('(', ')', index)
             indicator = index
-            end = _extractRepetition(index)
+            end = self._extractRepetition(index)
+            if indicator == end:
+                self.matcherList.append(BackRefMatcher(self.expr[start:end], self.backRef, self.exact))
+            else:
+                self.matcherList.append(RepeatMatcher(self.expr[start:end], self.backRef, indicator-start, self.exact))
         elif '<' == self.expr[index]:
             index += 1
             index = self._extractSubPattern('<', '>', index)
             indicator = index
             end = self._extractRepetition(index)
+            self.matcherList.append(RepeatMatcher(self.expr[start:end], self.backRef, indicator-start, self.exact))
             logging.debug("start: " + str(start) + " end: " + str(end) + " indicator: " + str(indicator))
         elif '[' == self.expr[index]:
             index += 1
             index = self._extractSubPattern('[', ']', index)
             indicator = index
             end = self._extractRepetition(index)
+            self.matcherList.append(RepeatMatcher(self.expr[start:end], self.backRef, indicator-start, self.exact))
             logging.debug("start: " + str(start) + " end: " + str(end) + " indicator: " + str(indicator))
         else:
             raise RegexError(errMsg +"unexpected syntax")
         
-        self.matcherList.append(RepeatMatcher(self.expr[start:end], self.backRef, indicator - start))
+        
 
         return (True, end)
 
     def _extractSubPattern(self, left, right, index):
-        logging.debug("PatternListMatcher _extractSubPattern")
+        logging.debug(self.__class__.__name__ + "._extractSubPattern")
 
         lcount = 1
         rcount = 0
@@ -258,7 +270,7 @@ class PatternListMatcher(BaseMatcher):
         return index
     
     def _extractRepetition(self, index):
-        logging.debug("PatternListMatcher _extractRepetition")
+        logging.debug(self.__class__.__name__ + "._extractRepetition")
 
         exprSize = len(self.expr)
 
@@ -289,7 +301,7 @@ class PatternListMatcher(BaseMatcher):
 
 class RepeatMatcher(BaseMatcher):
     def __init__(self, expr, backRef, indicator, exact=True):
-        logging.debug("RepeatMatcher Constructor")
+        logging.debug(self.__class__.__name__ + ".Constructor")
         logging.debug("expr: " + expr);
         super(RepeatMatcher, self).__init__(expr, backRef, exact)
         self.indicator = indicator
@@ -302,7 +314,7 @@ class RepeatMatcher(BaseMatcher):
         logging.debug("repeatMin: " + str(self.repeatMin) + " repeatMax: " + str(self.repeatMax))
 
     def _parseRepetition(self):
-        logging.debug("RepeatMatcher _parseRepetition")
+        logging.debug(self.__class__.__name__ + "._parseRepetition")
 
         errMsg = "Error: RepeatMatcher._parseRepetition(): ";
     
@@ -330,19 +342,19 @@ class RepeatMatcher(BaseMatcher):
                 min = 0
                 max = 0
 
-        if re.match('{[0-9]+,[0-9]+}', repeatStruct):
+        if re.match('{[0-9]+,[0-9]+}$', repeatStruct):
             repeats = repeatStruct[1:-1].split(',')
             min = int(repeats[0])
             max = int(repeats[1])
-        elif re.match('{[0-9]+,}', repeatStruct):
+        elif re.match('{[0-9]+,}$', repeatStruct):
             repeats = repeatStruct[1:-1].split(',')
-            min = int(repeat[0])
+            min = int(repeats[0])
             max = intMax
-        elif re.match('{,[0-9]+}', repeatStruct):
+        elif re.match('{,[0-9]+}$', repeatStruct):
             repeats = repeatStruct[1:-1].split(',')
             min = 0
-            max = int(repeat[1])
-        elif re.match('{[0-9]+}', repeatStruct):
+            max = int(repeats[1])
+        elif re.match('{[0-9]+}$', repeatStruct):
             min = int(repeatStruct[1:- 1])
             max = min;
         else:
@@ -355,7 +367,7 @@ class RepeatMatcher(BaseMatcher):
         self.repeatMax = max
 
     def match(self, name, offset, len):
-        logging.debug("RepeatMatcher.match()")
+        logging.debug(self.__class__.__name__ + ".match(): " + "expr: " + self.expr + " offset: " + str(offset) + " len: " + str(len) + " repeatMin: " + str(self.repeatMin))
         self.matchResult = []
 
         if 0 == self.repeatMin:
@@ -370,16 +382,16 @@ class RepeatMatcher(BaseMatcher):
             return False
 
     def _recursiveMatch(self, repeat, name, offset, len):
-        logging.debug ("RepeatMatcher._recursiveMatch()")
+        logging.debug (self.__class__.__name__ + "._recursiveMatch()" + " repeat: " + str(repeat) + " offset: " + str(offset) + " len: " + str(len) + " rMin: " + str(self.repeatMin) + " rMax: " + str(self.repeatMax))
         tried = 0
         matcher = self.matcherList[0]
 
-        if 0 < len and repeat > self.repeatMax:
+        if 0 < len and repeat >= self.repeatMax:
             logging.debug("Match Fail: Reach m_repeatMax && More components")
             return False
 
         if 0 == len and repeat < self.repeatMin:
-            logging.debug("Match Fail: No more components && have NOT reached m_repeatMin")
+            logging.debug("Match Fail: No more components && have NOT reached m_repeatMin " + str(len) + ", " + str(self.repeatMin))
             return False
 
         if 0 == len and repeat >= self.repeatMin:
@@ -398,8 +410,8 @@ class RepeatMatcher(BaseMatcher):
 
 class RegexMatcher(BaseMatcher):
     def __init__(self, expr, exact=True):
+        logging.debug(self.__class__.__name__ + ".Constructor")
         super(RegexMatcher, self).__init__(expr, None, exact)
-        logging.debug("RegexTopMatcher Constructor")
 
         self.backRef = []
         errMsg = "Error: RegexTopMatcher Constructor: "
@@ -418,11 +430,31 @@ class RegexMatcher(BaseMatcher):
 
         self.matcherList.append(PatternListMatcher(tmp_expr, self.backRef, self.exact))
 
-    def matchName(name):
-        return self.match(name, 0, len(name))
+    def matchName(self, name):
+        logging.debug(self.__class__.__name__ + ".matchName")
+        res = self.matcherList[0].match(name, 0, len(name))
+        self.matchResult += self.matcherList[0].matchResult
+        return res
+
+    def extract(self, rule):
+        logging.debug(self.__class__.__name__ + ".extract")
         
+        if not re.match('(\\\\[0-9]+)+$', rule):
+            raise RegexError("Wrong format of rule")
+        
+        refs = rule.split('\\')
+        refs.pop(0)
 
+        result = []
+        for index in refs:
+            i = int(index) - 1
+            
+            if len(self.backRef) <= i or 0 > i:
+                raise RegexError("Wrong back reference number!")
+            
+            result += self.backRef[i].matchResult
 
+        return result
 
 
 
