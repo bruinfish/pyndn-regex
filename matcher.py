@@ -326,7 +326,7 @@ class RepeatMatcher(BaseMatcher):
                     self.repeatMax = intMax
                 return
             else:
-                repeatStruct = self.expr[m_indicator:exprSize]
+                repeatStruct = self.expr[self.indicator:exprSize]
                 min = 0
                 max = 0
 
@@ -343,7 +343,7 @@ class RepeatMatcher(BaseMatcher):
             min = 0
             max = int(repeat[1])
         elif re.match('{[0-9]+}', repeatStruct):
-            min = int(repeatsStruct[1:- 1])
+            min = int(repeatStruct[1:- 1])
             max = min;
         else:
             raise RegexError(errMsg + "Unrecognized format "+ self.expr);
