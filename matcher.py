@@ -208,7 +208,7 @@ class PatternListMatcher(BaseMatcher):
     def _extractPattern(self, index, next):
         logging.debug("PatternListMatcher _extractPattern")
 
-        errMsg = "Error: PatternListMatcher._extractSubPattern: "
+        errMsg = "Error: PatternListMatcher._extractPattern: "
     
         start = index
         End = index
@@ -224,6 +224,12 @@ class PatternListMatcher(BaseMatcher):
         elif '<' == self.expr[index]:
             index += 1
             index = self._extractSubPattern('<', '>', index)
+            indicator = index
+            end = self._extractRepetition(index)
+            logging.debug("start: " + str(start) + " end: " + str(end) + " indicator: " + str(indicator))
+        elif '[' == self.expr[index]:
+            index += 1
+            index = self._extractSubPattern('[', ']', index)
             indicator = index
             end = self._extractRepetition(index)
             logging.debug("start: " + str(start) + " end: " + str(end) + " indicator: " + str(indicator))

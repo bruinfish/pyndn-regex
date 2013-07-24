@@ -39,9 +39,10 @@ try:
     logging.debug("==========Test on PatternListMatcher==========")
     m = PatternListMatcher('<a><b><c>', None)
     m.match(Name('/a/b/c/'), 0, 3)
-    print m.matchResult
     assert m.matchResult == ['a', 'b', 'c']
-
+    m = PatternListMatcher('<a>[<a><b>]', None)
+    m.match(Name('/a/b/c/'), 0, 2)
+    assert m.matchResult == ['a', 'b']
 
     m = RepeatMatcher('[<a><b><c>]*', None, 11)
     m.match(Name('/a/b/c'), 0, 0)
