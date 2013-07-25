@@ -50,9 +50,43 @@ class BaseMatcher(object):
             logging.debug(self.__class__.__name__ + " expr: " + self.expr + " mId: " + str(mId) + " tried: " + str(tried) + " length: " + str(length))
             tried += 1
             
-
         return False
 
+
+    def aggressiveMatch(self, name, offset, len):
+        logging.debug(self.__class__.__name__ + ".aggressiveMatch(): " + "expr: " + self.expr + " offset: " + str(offset) + " length: " + str(len))
+        self.matchResult = []
+
+        if self._aRecursiveMatch(0, name, offset, len):
+            for i in range(offset,  offset + len):
+                self.matchResult.append(name[i])
+            return True
+        else:
+            return False
+
+    def _aRecursiveMatch(self, mId, name, offset, length):
+        logging.debug(self.__class__.__name__ + "._aRecursiveMatch(): " + self.expr)
+        logging.debug("mId: " + str(mId) + " name: " +  str(name) + " offset: " + str(offset) + " length: " + str(length) + " matcherListSize: " + str(len(self.matcherList)))
+
+        tried = length
+
+        if mId >= len(self.matcherList) :
+            if length != 0 :
+                logging.debug("Fail " + self.__class__.__name__ + "._recursiveMatch(): no more matcher, but more components")
+                return False
+            else:
+                logging.debug("Succeed " + self.__class__.__name__ + "._recursiveMatch(): no more matcher, no more components")
+                return True
+
+        matcher = self.matcherList[mId]
+
+        while tried >= 0:
+            if matcher.aggressiveMatch(name, offset, tried) and self._aRecursiveMatch(mId + 1, name, offset + tried, length - tried):
+                return True
+            logging.debug(self.__class__.__name__ + " expr: " + self.expr + " mId: " + str(mId) + " tried: " + str(tried) + " length: " + str(length))
+            tried -= 1
+
+        return False
 
 
 class ComponentMatcher(BaseMatcher):
@@ -80,6 +114,9 @@ class ComponentMatcher(BaseMatcher):
                 return True
             
         return False
+
+    def aggressiveMatch(self, name, offset, len):
+        return self.match(name, offset, len)
             
 
 class ComponentSetMatcher(BaseMatcher):
@@ -173,6 +210,9 @@ class ComponentSetMatcher(BaseMatcher):
             return True
         else:
             return False
+
+    def aggressiveMatch(self, name, offset, len):
+        return self.match(name, offset, len)
 
 class BackRefMatcher(BaseMatcher):
     def __init__(self, expr, backRef, exact=True):
@@ -408,6 +448,51 @@ class RepeatMatcher(BaseMatcher):
 
         return False
 
+
+    def aggressiveMatch(self, name, offset, len):
+        logging.debug(self.__class__.__name__ + ".aggressiveMatch(): " + "expr: " + self.expr + " offset: " + str(offset) + " len: " + str(len) + " repeatMin: " + str(self.repeatMin))
+        self.matchResult = []
+
+        if 0 == self.repeatMin:
+            if 0 == len:
+                return True
+
+        if self._aRecursiveMatch(0, name, offset, len):
+            for i in range(offset, offset+len):
+                self.matchResult.append(name[i])
+            return True
+        else:
+            return False
+
+    def _aRecursiveMatch(self, repeat, name, offset, len):
+        logging.debug (self.__class__.__name__ + "._aRecursiveMatch()" + " repeat: " + str(repeat) + " offset: " + str(offset) + " len: " + str(len) + " rMin: " + str(self.repeatMin) + " rMax: " + str(self.repeatMax))
+        tried = len
+        matcher = self.matcherList[0]
+
+        if 0 < len and repeat >= self.repeatMax:
+            logging.debug("Match Fail: Reach m_repeatMax && More components")
+            return False
+
+        if 0 == len and repeat < self.repeatMin:
+            logging.debug("Match Fail: No more components && have NOT reached m_repeatMin " + str(len) + ", " + str(self.repeatMin))
+            return False
+
+        if 0 == len and repeat >= self.repeatMin:
+            logging.debug("Match Succeed: No more components && reach m_repeatMin")
+            return True
+
+        while tried >= 0:
+            logging.debug("Attempt tried: " + str(tried))
+            
+            if matcher.aggressiveMatch(name, offset, tried) and self._aRecursiveMatch(repeat + 1, name, offset + tried, len - tried):
+                return True;
+            logging.debug("Failed at tried: " + str(tried));
+            tried -= 1
+
+        return False
+
+
+
 class RegexMatcher(BaseMatcher):
     def __init__(self, expr, exact=True):
         logging.debug(self.__class__.__name__ + ".Constructor")
@@ -456,6 +541,11 @@ class RegexMatcher(BaseMatcher):
 
         return result
 
+    def matchN(self, name):
+        logging.debug(self.__class__.__name__ + ".matchN")
+        res = self.matcherList[0].aggressiveMatch(name, 0, len(name))
+        self.matchResult += self.matcherList[0].matchResult
+        return res
 
 
 
