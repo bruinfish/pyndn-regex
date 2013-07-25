@@ -398,5 +398,10 @@ try:
     assert res == True
     assert m.extract('\\1') == ['a','b']
 
+    m = RegexMatcher('<a>(<.*>*)<.*>$')
+    res = m.matchN(Name('/n/a/b/c/'))
+    assert res == True
+    assert m.extract('\\1') == ['b']
+
 except RegexError as e:
     print str(e)

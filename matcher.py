@@ -97,7 +97,7 @@ class ComponentMatcher(BaseMatcher):
         super(ComponentMatcher, self).__init__(expr, backRef, exact)
 
     def match(self, name, offset, len):
-        logging.debug(self.__class__.__name__ + ".match()")
+        logging.debug(self.__class__.__name__ + ".match(): " + self.expr)
         logging.debug("Name " + str(name) + " offset " +  str(offset) + " len " +str(len))
 
         self.matchResult = []
@@ -190,7 +190,7 @@ class ComponentSetMatcher(BaseMatcher):
         return index
 
     def match(self, name, offset, len):
-        logging.debug(self.__class__.__name__ + ".match")
+        logging.debug(self.__class__.__name__ + ".match(): " + self.expr)
 
         self.matchResult = []
         
@@ -502,6 +502,7 @@ class RegexMatcher(BaseMatcher):
         self.second_backRef = []
 
         self.secondaryMatcher = None
+
         
         errMsg = "Error: RegexTopMatcher Constructor: "
         tmp_expr = self.expr
@@ -527,12 +528,15 @@ class RegexMatcher(BaseMatcher):
 
     def matchName(self, name):
         logging.debug(self.__class__.__name__ + ".matchName")
+        
+        self.secondaryUsed = False
+        
         res = self.primaryMatcher.match(name, 0, len(name))
         self.matchResult += self.primaryMatcher.matchResult
         if False == res and None != self.secondaryMatcher:
             res = self.secondaryMatcher.match(name, 0, len(name))
             self.matchResult += self.secondaryMatcher.matchResult
-
+            self.secondaryUsed = True
         return res
 
     def extract(self, rule):
@@ -544,25 +548,32 @@ class RegexMatcher(BaseMatcher):
         refs = rule.split('\\')
         refs.pop(0)
 
+        backRef = self.backRef
+        if self.secondaryUsed:
+            backRef = self.second_backRef
+
         result = []
         for index in refs:
             i = int(index) - 1
             
-            if len(self.backRef) <= i or 0 > i:
+            if len(backRef) <= i or 0 > i:
                 raise RegexError("Wrong back reference number!")
             
-            result += self.backRef[i].matchResult
+            result += backRef[i].matchResult
 
         return result
 
     def matchN(self, name):
         logging.debug(self.__class__.__name__ + ".matchN")
+
+        self.secondaryUsed = False
+        
         res = self.primaryMatcher.aggressiveMatch(name, 0, len(name))
         self.matchResult += self.primaryMatcher.matchResult
         if False == res and None != self.secondaryMatcher:
             res = self.secondaryMatcher.aggressiveMatch(name, 0, len(name))
             self.matchResult += self.secondaryMatcher.matchResult
-
+            self.secondaryUsed = True
         return res
 
 
