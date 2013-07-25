@@ -499,26 +499,40 @@ class RegexMatcher(BaseMatcher):
         super(RegexMatcher, self).__init__(expr, None, exact)
 
         self.backRef = []
+        self.second_backRef = []
+
+        self.secondaryMatcher = None
+        
         errMsg = "Error: RegexTopMatcher Constructor: "
         tmp_expr = self.expr
-        if '^' != tmp_expr[0]:
-            tmp_expr = "<.*>*" + tmp_expr
-        else:
-            tmp_expr = tmp_expr[1:]
 
         if '$' != tmp_expr[-1]:
             tmp_expr = tmp_expr + "<.*>*";
         else:
             tmp_expr = tmp_expr[0:-1]
+        
+        if '^' != tmp_expr[0]:
+            self.secondaryMatcher = PatternListMatcher("<.*>*" + tmp_expr, self.second_backRef, self.exact)
+        else:
+            tmp_expr = tmp_expr[1:]
 
         logging.debug ("reconstructed expr " + tmp_expr);
 
-        self.matcherList.append(PatternListMatcher(tmp_expr, self.backRef, self.exact))
+        self.primaryMatcher = PatternListMatcher(tmp_expr, self.backRef, self.exact)
+
+
+
+    def firstMatcher():
+        return None
 
     def matchName(self, name):
         logging.debug(self.__class__.__name__ + ".matchName")
-        res = self.matcherList[0].match(name, 0, len(name))
-        self.matchResult += self.matcherList[0].matchResult
+        res = self.primaryMatcher.match(name, 0, len(name))
+        self.matchResult += self.primaryMatcher.matchResult
+        if False == res and None != self.secondaryMatcher:
+            res = self.secondaryMatcher.match(name, 0, len(name))
+            self.matchResult += self.secondaryMatcher.matchResult
+
         return res
 
     def extract(self, rule):
@@ -543,8 +557,12 @@ class RegexMatcher(BaseMatcher):
 
     def matchN(self, name):
         logging.debug(self.__class__.__name__ + ".matchN")
-        res = self.matcherList[0].aggressiveMatch(name, 0, len(name))
-        self.matchResult += self.matcherList[0].matchResult
+        res = self.primaryMatcher.aggressiveMatch(name, 0, len(name))
+        self.matchResult += self.primaryMatcher.matchResult
+        if False == res and None != self.secondaryMatcher:
+            res = self.secondaryMatcher.aggressiveMatch(name, 0, len(name))
+            self.matchResult += self.secondaryMatcher.matchResult
+
         return res
 
 

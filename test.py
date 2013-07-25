@@ -388,10 +388,15 @@ try:
     assert res == True
     assert m.extract('\\1\\2') == ['n','a', 'd']
 
-    m = RegexMatcher('^(<.*>*)<.*>')
+    m = RegexMatcher('(<.*>*)<.*>$')
     res = m.matchN(Name('/n/a/b/c/'))
     assert res == True
-    assert m.extract('\\1') == ['n','a','b']
+    assert m.extract('\\1') == ['n', 'a', 'b']
+    
+    m = RegexMatcher('<.*>(<.*>*)<.*>$')
+    res = m.matchN(Name('/n/a/b/c/'))
+    assert res == True
+    assert m.extract('\\1') == ['a','b']
 
 except RegexError as e:
     print str(e)
